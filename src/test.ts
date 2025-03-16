@@ -6,7 +6,7 @@ async function test() {
 
 	try {
 		const result = await executor.run(
-			"Research page https://duonguyen.site"
+			"Research page https://duonguyen.site/blogs/manus-js-tro-ly-nghien-cuu-web-thong-minh-duoc-ho-tro-boi-ai"
 		);
 		console.log("Result:", result);
 	} catch (error) {

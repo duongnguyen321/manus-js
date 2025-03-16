@@ -10,15 +10,15 @@ export default async function initializeAgent() {
 	const browserTool = new BrowserTools();
 
 	const analyzerModel = new ChatOpenAI({
-		temperature: 0.2,
+		temperature: configs.openai.temperature,
 		modelName: configs.openai.model,
-		streaming: false,
+		streaming: configs.openai.streaming,
 	});
 
 	const researchModel = new ChatOpenAI({
-		temperature: 0.5,
+		temperature: configs.openai.temperature,
 		modelName: configs.openai.model,
-		streaming: false,
+		streaming: configs.openai.streaming,
 	});
 
 	return {

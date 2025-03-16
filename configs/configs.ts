@@ -6,7 +6,7 @@ const configs = {
 		apiKey: env.OPENAI_API_KEY,
 		modelUrl: env.MODEL_URL || 'https://api.openai.com/v1',
 		model: env.OPENAI_MODEL || 'gpt-4o',
-		temperature: Number(env.OPENAI_TEMPERATURE) || 0.7,
+		temperature: env.OPENAI_TEMPERATURE ? Number(env.OPENAI_TEMPERATURE) : undefined,
 		streaming: env.IS_STREAMING === 'true' || true,
 	},
 	browser: {

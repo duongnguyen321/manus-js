@@ -20,6 +20,8 @@
     "chalk": "^5.4.1",
     "langchain": "^0.3.19",
     "ora": "^8.2.0",
-    "playwright": "^1.51.0"
+    "puppeteer": "^24.4.0",
+    "puppeteer-core": "^24.4.0",
+    "puppeteer-real-browser": "^1.4.2"
   }
 }

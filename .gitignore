@@ -39,3 +39,4 @@ data/*
 logs/*
 bun.lock
 bun.lockb
+userData/*

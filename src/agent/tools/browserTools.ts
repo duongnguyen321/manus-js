@@ -1,6 +1,7 @@
 // src/agent/tools/browserTools.ts
-import {type Browser, chromium, type Page} from 'playwright';
 import {Tool} from 'langchain/tools';
+import {Browser, Page} from "puppeteer";
+import createBrowser from "../../utils/puppeteer.ts";
 import logger from "../../utils/logger.ts";
 import configs from '../../../configs/configs';
 
@@ -8,40 +9,6 @@ class BrowserTools extends Tool {
 	name = 'browser';
 	description = 'Use this tool to browse websites, search for information, and extract content from web pages. Input should be a URL or search query.';
 	browser: Browser | null = null;
-	private readonly browserConfig = {
-		args: [
-			'--disable-blink-features=AutomationControlled',
-			'--no-sandbox',
-			'--disable-setuid-sandbox',
-			'--disable-infobars',
-			'--window-position=0,0',
-			'--ignore-certifcate-errors',
-			'--ignore-certifcate-errors-spki-list',
-		],
-		ignoreHTTPSErrors: true,
-		properties: {
-			'navigator.webdriver': false,
-		}
-	};
-
-	async setupPage(context: any): Promise<Page> {
-		const page = await context.newPage();
-
-		// Modify page properties to avoid detection
-		await page.addInitScript(() => {
-			Object.defineProperty(navigator, 'webdriver', {
-				get: () => false,
-			});
-			Object.defineProperty(navigator, 'languages', {
-				get: () => ['en-US', 'en'],
-			});
-			Object.defineProperty(navigator, 'plugins', {
-				get: () => [1, 2, 3, 4, 5],
-			});
-		});
-
-		return page;
-	}
 
 	async handleInternalLinks(page: Page) {
 		try {
@@ -142,12 +109,12 @@ class BrowserTools extends Tool {
 					logger.info(`Following ${links.isSearchPage ? 'external' : 'internal'} link: ${absoluteUrl}`);
 
 					await page.goto(absoluteUrl, {
-						waitUntil: 'domcontentloaded',
+						waitUntil: 'networkidle2',
 						timeout: 15000
 					});
 
 					try {
-						await page.waitForLoadState('networkidle', {timeout: 5000});
+						await page.waitForNetworkIdle({timeout: 5000});
 					} catch (e) {
 						logger.debug('Network not idle for link, continuing...');
 					}
@@ -213,61 +180,68 @@ class BrowserTools extends Tool {
 		});
 	}
 
-	async _call(input: string): Promise<string>  {
+	async _call(input: string): Promise<string> {
 		try {
 			if (!this.browser) {
-				this.browser = await chromium.launch({
-					headless: configs.browser.headless,
-					...this.browserConfig
-				});
+				const _browser = await createBrowser()
+				this.browser = _browser as unknown as Browser || null;
 			}
-			const context = await this.browser.newContext({
-				userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-				viewport: {width: 1920, height: 1080},
-				locale: 'en-US',
-			});
 
-			const page = await this.setupPage(context);
+			const page = await this.browser?.newPage();
 
+			// Enable request interception
+			// Enable request interception once before attaching any handlers
+			await page.setRequestInterception(true);
 
-			// Block unnecessary resources
-			await page.route('**/*', async (route) => {
-				const resourceType = route.request().resourceType();
-				const blockedResources = [
-					 // this is empty because we don't want to block anything
-					'image',
-					'stylesheet',
-					'font',
-					'media',
-					'websocket',
-					'other',
-				];
+			// Set up request handler
+			page.on('request', (request) => {
+				try {
+					const resourceType = request.resourceType();
+					const url = request.url();
+					const blockedResources = [
+						'image',
+						'stylesheet',
+						'font',
+						'media',
+						'websocket',
+						'other',
+					];
 
-				if (blockedResources.includes(resourceType)) {
-					await route.abort();
-				} else if (resourceType === 'script') {
-					const url = route.request().url();
-					if (url.includes('google-analytics') || url.includes('advertisement') || url.includes('clarity')) {
-						await route.abort();
-					} else {
-						await route.continue();
+					// Script filtering logic
+					if (resourceType === 'script' &&
+						(url.includes('google-analytics') ||
+							url.includes('advertisement') ||
+							url.includes('clarity'))) {
+						request.abort();
 					}
-				} else {
-					await route.continue();
+					// Other resource types filtering
+					else if (blockedResources.includes(resourceType)) {
+						request.abort();
+					}
+					// Allow everything else
+					else {
+						request.continue();
+					}
+				} catch (error: any) {
+					// Ignore "already handled" errors, log others
+					if (!error.message.includes('already handled')) {
+						console.error('Request interception error:', error);
+					}
 				}
 			});
+
 
 			logger.info(`Navigating to: ${input}`);
 
 			const url = input.startsWith('http') ? input : `https://www.google.com/search?q=${encodeURIComponent(input)}`;
 
 			await page.goto(url, {
-				waitUntil: 'domcontentloaded',
+				waitUntil: 'networkidle2',
 				timeout: 15000,
 			});
 
 			try {
-				await page.waitForLoadState('networkidle', {timeout: 5000});
+				await page.waitForNetworkIdle({timeout: 5000});
 			} catch (e) {
 				logger.debug('The network is not idle');
 			}
@@ -286,10 +260,7 @@ class BrowserTools extends Tool {
 			}
 
 			// Trim content to prevent token limits
-			content = content.substring(0, 10000);
-
-			await page.close();
-			await context.close();
+			content = content.substring(0, 5000);
 
 			return content;
 
@@ -301,7 +272,7 @@ class BrowserTools extends Tool {
 
 	async shutdown() {
 		if (this.browser) {
-			await this.browser.close();
+			await this.browser?.close();
 			this.browser = null;
 		}
 	}
