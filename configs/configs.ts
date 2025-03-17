@@ -2,28 +2,38 @@
 import { env } from 'bun';
 
 const configs = {
+	// OpenAI Configuration
 	openai: {
-		apiKey: env.OPENAI_API_KEY,
-		modelUrl: env.MODEL_URL || 'https://api.openai.com/v1',
-		model: env.OPENAI_MODEL || 'gpt-4o',
-		temperature: env.OPENAI_TEMPERATURE
-			? Number(env.OPENAI_TEMPERATURE)
-			: undefined,
-		streaming: env.IS_STREAMING === 'true' || true,
+		apiKey: env?.OPENAI_API_KEY,
+		apiBaseUrl: env?.OPENAI_API_URL || 'https://api.openai.com/v1',
+		model: env?.OPENAI_MODEL || 'gpt-4o',
+		temperature: env?.OPENAI_TEMPERATURE ? Number(env.OPENAI_TEMPERATURE) : 0.7,
+		streaming: env?.IS_STREAMING === 'true',
 	},
+
+	// OpenRouter Configuration
+	openrouter: {
+		apiKey: env?.OPENROUTER_API_KEY,
+		apiBaseUrl: env?.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1',
+		model: env?.OPENROUTER_MODEL || 'google/gemini-2.0-flash-lite-preview-02-05:free',
+		temperature: env?.OPENROUTER_TEMPERATURE ? Number(env.OPENROUTER_TEMPERATURE) : 0.7,
+		streaming: env?.IS_STREAMING === 'true',
+	},
+
+	// Browser Configuration
 	browser: {
-		limit: Number(env.BROWSER_LIMIT) || 5,
-		headless: env.BROWSER_HEADLESS === 'true',
-		timeout: Number(env.BROWSER_TIMEOUT) || 10000,
-		defaultViewport: {
-			width: 1920,
-			height: 1080,
-		},
+		limit: env?.BROWSER_LIMIT ? Number(env.BROWSER_LIMIT) : 5,
+		headless: env?.BROWSER_HEADLESS === 'true',
+		timeout: env?.BROWSER_TIMEOUT ? Number(env.BROWSER_TIMEOUT) : 10000,
+		defaultViewport: { width: 1920, height: 1080 },
 	},
+
+	// Agent Configuration
 	agent: {
-		maxIterations: Number(env.AGENT_MAX_ITERATIONS) || 3,
-		verbose: env.AGENT_VERBOSE === 'true',
+		maxIterations: env?.AGENT_MAX_ITERATIONS ? Number(env.AGENT_MAX_ITERATIONS) : 3,
+		verbose: env?.AGENT_VERBOSE === 'true',
 	},
+
 };
 
 export default configs;
