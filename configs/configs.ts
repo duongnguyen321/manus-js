@@ -1,5 +1,5 @@
 // configs/config.ts
-import { env } from 'bun';
+import {env} from 'bun';
 
 const configs = {
 	// OpenAI Configuration
@@ -23,9 +23,10 @@ const configs = {
 	// Browser Configuration
 	browser: {
 		limit: env?.BROWSER_LIMIT ? Number(env.BROWSER_LIMIT) : 5,
+		batch: env?.BROWSER_BATCH ? Number(env.BROWSER_BATCH) : 3,
 		headless: env?.BROWSER_HEADLESS === 'true',
 		timeout: env?.BROWSER_TIMEOUT ? Number(env.BROWSER_TIMEOUT) : 10000,
-		defaultViewport: { width: 1920, height: 1080 },
+		defaultViewport: {width: 1920, height: 1080},
 	},
 
 	// Agent Configuration
@@ -38,49 +39,44 @@ const configs = {
 
 export default configs;
 
-export const TASK_ANALYSIS_PROMPT = `
-Detect and anwer the following user language
-
+export const TASK_ANALYSIS_PROMPT = (input: string) => `
 You are a task analysis and research planning AI. Your role is to:
 
 1. Analyze the given task to identify user intent and needs.
-2. Break the task into subtasks requiring web research.
+2. Break the task into subtasks with optional have web research.
 3. Create precise research queries for each subtask.
-4. Recommend the best target sites (limited to 1-2 per subtask) for research.
+4. Recommend the best target sites (limited to 1-2 per subtask) for research. (Optional)
 5. Deliver a plan for executing the task based on research outcomes.
 
-Task: {input}
+Important:
+Always include specific search queries for each topic, even if they must be generated from context
+Always recommend relevant target websites in the format "domain.com/path" (without http/https)
+If exact sites aren't obvious, suggest industry-standard resources or authoritative sites in the relevant field
+Ensure all research components directly address the user's intent and needs
+RETURNED VALID JSON parse
 
-Provide your analysis in the following format:
-- Task Overview: [Brief description of the overall task]
+Task: ${input}
 
-- Research Requirements:
-  * [List each specific website or source that needs to be researched]
-  * [Include exact URLs when possible]
-  * [Specify search queries for each research point]
+Returned format is JSON ARRAY must follow this format, without any tag markdown or XML:
+[
+	{
+	  "name": Title of task,
+	  "searchQuery": Detail and search query of task,
+	  "targetSites": [
+	    domain with path
+	  ]
+	},
+	{
+	  "name": Title of task,
+	  "searchQuery": Detail and search query of task,
+	  "targetSites": [
+	    domain with path, without protocol
+	  ]
+	}
+]
+`;
 
-- Research Topics:
-[List key resources/sites, ensuring no more than 1-2 per topic.]
-
-  1. [Topic 1]
-     - Search Query: [Specific search term]
-     - Target Sites: [Specific sites to check must include domain]
-     - Information to Extract: [What specific info to look for]
-  
-  2. [Topic 2]
-     - Search Query: [Specific search term]
-     - Target Sites: [Specific sites to check must include domain]
-     - Information to Extract: [What specific info to look for]
-
-- Execution Plan:
-  1. [Step-by-step plan incorporating research findings]
-  2. [How to use the researched information]
-  3. [Final deliverable format]
-
-Note: Each research topic must include specific search queries and target websites.
-Ensure research aligns closely with the user's intent and context`;
-
-export const SYNTHESIS_PROMPT = `
+export const SYNTHESIS_PROMPT = (findings: string) => `
 Detect and respond in the user's language.
 
 You are a research synthesizer. Your task is to:
@@ -89,7 +85,7 @@ You are a research synthesizer. Your task is to:
 2. Identify trends, gaps, and inconsistencies within the data.
 3. Formulate clear and concise recommendations for next steps.
 
-Research Findings: {findings}
+Research Findings: ${findings}
 
 Provide synthesis in the following format:
 
@@ -111,12 +107,9 @@ Provide synthesis in the following format:
 4. Final Summary:
    [Comprehensive summary of all findings and next steps]`;
 
-export const SUMMA_PROMPT = `
-      The following text is too long for processing. Please summarize it into a clear, concise version that is within 5000 characters, retaining all key details and important points:
-
-      --- START OF LONG CONTENT ---
-      {content}
-      --- END OF LONG CONTENT ---
-
-      Summarized Content:
-    `;
+export const SUMMA_PROMPT = (content: string) => `
+Summarize that, retaining all key details and important points:
+--- START OF LONG CONTENT ---
+${content}
+--- END OF LONG CONTENT ---
+`;

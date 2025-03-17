@@ -1,11 +1,12 @@
 // src/agent/tools/browserTools.ts
-import { Tool } from 'langchain/tools';
-import { Browser, Page } from 'puppeteer';
+import {Tool} from 'langchain/tools';
+import {Browser, Page} from 'puppeteer';
 import createBrowser from '../../utils/puppeteer.ts';
 import logger from '../../utils/logger.ts';
-import configs, { SUMMA_PROMPT } from '../../../configs/configs';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { ChatOpenAI } from '@langchain/openai';
+import configs, {SUMMA_PROMPT} from '../../../configs/configs';
+import {HumanMessage, SystemMessage} from '@langchain/core/messages';
+import {ChatOpenAI} from '@langchain/openai';
+
 class BrowserTools extends Tool {
 	name = 'browser';
 	description =
@@ -19,7 +20,7 @@ class BrowserTools extends Tool {
 		cache: true,
 	});
 
-	async handleInternalLinks(page: Page) {
+	async handleInternalLinks(page: Page, browser: Browser) {
 		try {
 			// Get all links
 			const links = await page.evaluate(() => {
@@ -113,28 +114,32 @@ class BrowserTools extends Tool {
 
 			// Collect content from links
 			let allContent = '';
-			for (const link of links.links.slice(0, configs.browser.limit)) {
+			const mapLinks: string[] = []
+			links.links.forEach((link) => {
+				if (!link) return
+				if (!mapLinks.includes(link)) mapLinks.push(link);
+			})
+			for (const link of mapLinks.slice(0, configs.browser.limit)) {
 				try {
-					if (!link) continue;
 					const absoluteUrl = new URL(link, page.url()).href;
 					logger.info(
 						`Following ${
 							links.isSearchPage ? 'external' : 'internal'
 						} link: ${absoluteUrl}`
 					);
-
-					await page.goto(absoluteUrl, {
+					const internalPage = await browser.newPage();
+					await internalPage.goto(absoluteUrl, {
 						waitUntil: 'networkidle2',
 						timeout: 15000,
 					});
 
 					try {
-						await page.waitForNetworkIdle({ timeout: 5000 });
+						await internalPage.waitForNetworkIdle({timeout: 5000});
 					} catch (e) {
 						logger.debug('Network not idle for link, continuing...');
 					}
 
-					const content = await this.extractContent(page);
+					const content = await this.extractContent(internalPage);
 					allContent += `\n\nContent from ${absoluteUrl}:\n${content}`;
 				} catch (error: any) {
 					logger.debug(`Failed to process link ${link}:`, error.message);
@@ -149,7 +154,7 @@ class BrowserTools extends Tool {
 	}
 
 	async extractContent(page: Page) {
-		return await page.evaluate(() => {
+		const content = await page.evaluate(() => {
 			const getTextContent = (element: HTMLElement) => {
 				// Remove unwanted elements
 				const selectorsToRemove = [
@@ -194,6 +199,23 @@ class BrowserTools extends Tool {
 
 			return getTextContent(document.body);
 		});
+		logger.info('Summarizing content');
+		const summon = await this.model.call([
+			new SystemMessage('Detect and answer the following user language'),
+			new SystemMessage(SUMMA_PROMPT(content)),
+		]);
+		if (summon) return summon.content.toString();
+		return content
+	}
+
+	async initial(input: string) {
+		if (!this.browser) {
+			const _browser = await createBrowser();
+			this.browser = (_browser as unknown as Browser) || null;
+		}
+
+		const page = await this.browser?.newPage();
+		await page.goto(input)
 	}
 
 	async _call(input: string): Promise<string> {
@@ -260,7 +282,7 @@ class BrowserTools extends Tool {
 			});
 
 			try {
-				await page.waitForNetworkIdle({ timeout: 5000 });
+				await page.waitForNetworkIdle({timeout: 5000});
 			} catch (e) {
 				logger.debug('The network is not idle');
 			}
@@ -273,21 +295,23 @@ class BrowserTools extends Tool {
 			let content = await this.extractContent(page);
 
 			// Handle internal links
-			const internalContent = await this.handleInternalLinks(page);
+
+			const internalContent = await this.handleInternalLinks(page, this.browser);
 			if (internalContent) {
 				content += internalContent;
 			}
 
 			// Trim content to prevent token limits
-			if (content.length > 5000) {
+			if (content.length > 10000) {
 				logger.info('Content too large, Summarizing...');
 				const summon = await this.model.call([
-					new SystemMessage('Detect and anwer the following user language'),
-					new SystemMessage(SUMMA_PROMPT),
-					new HumanMessage(input),
+					new SystemMessage('Detect and answer the following user language'),
+					new SystemMessage(SUMMA_PROMPT(content)),
 				]);
 				if (summon) content = summon.content.toString();
 			}
+
+			console.log('content: ', content)
 
 			return content;
 		} catch (error: any) {

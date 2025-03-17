@@ -123,7 +123,7 @@ async function main() {
 				throw new Error('Invalid AI provider selected');
 		}
 
-		
+
 
 		while (true) {
 			const query = await promptUser(rl, 'Enter your search query (or type "exit" to quit, "history" to see past queries):\n> ');
@@ -191,8 +191,6 @@ async function main() {
 		}
 	} catch (error) {
 		console.error(chalk.red('Fatal error:'), error);
-	} finally {
-		rl.close();
 	}
 }
 
