@@ -42,8 +42,11 @@ ${JSON.stringify(process, null, 2)}
 
 async function saveData(query: string, result: any) {
 	const content = `# Query Result
+	
 Query: ${query}
+
 Timestamp: ${new Date().toISOString()}
+
 ${result}
 `;
 	return await saveToFile(content, './data', query);

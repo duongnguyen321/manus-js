@@ -1,5 +1,7 @@
 # Query Log
+
 Query: Learn Code BlockChain with typescript for beginner
+
 Timestamp: 2025-03-17T13:07:11.081Z
 
 ## Process Details

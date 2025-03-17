@@ -1,6 +1,9 @@
 # Query Result
+
 Query: Learn Code BlockChain with typescript for beginner
+
 Timestamp: 2025-03-17T13:07:11.091Z
+
 Okay, the user is requesting information on how to learn about Blockchain using TypeScript for beginners.  The provided text is a summary of research about the topic, which helps outline a good learning path.  Here's a breakdown of how you can learn Blockchain with TypeScript, based on the user's request and the provided research summary, along with additional resources and explanations:
 
 **1. Foundational Knowledge (Blockchain Fundamentals):**
