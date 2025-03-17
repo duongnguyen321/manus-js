@@ -11,7 +11,7 @@ coverage
 *.lcov
 
 # logs
-logs
+./logs
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
@@ -35,8 +35,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 .env
 !.env.example
-data/*
-logs/*
+./data/*
+./logs/*
 bun.lock
 bun.lockb
 userData/*

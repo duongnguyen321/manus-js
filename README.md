@@ -31,6 +31,8 @@ An intelligent web research and analysis tool powered by OpenAI GPT models and b
 
 **[How can i run it?](https://duonguyen.site/blogs/manus-js-tro-ly-nghien-cuu-web-thong-minh-duoc-ho-tro-boi-ai)**
 
+See what response in [example](./example/data/learn-code-blockchain-with-typescript-for-beginner_2025-03-17T13-07-11-091Z.md)
+
 ## Features
 
 - 🤖 AI-powered task analysis and planning
