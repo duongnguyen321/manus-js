@@ -1,12 +1,14 @@
 // configs/config.ts
-import {env} from 'bun';
+import { env } from 'bun';
 
 const configs = {
 	openai: {
 		apiKey: env.OPENAI_API_KEY,
 		modelUrl: env.MODEL_URL || 'https://api.openai.com/v1',
 		model: env.OPENAI_MODEL || 'gpt-4o',
-		temperature: env.OPENAI_TEMPERATURE ? Number(env.OPENAI_TEMPERATURE) : undefined,
+		temperature: env.OPENAI_TEMPERATURE
+			? Number(env.OPENAI_TEMPERATURE)
+			: undefined,
 		streaming: env.IS_STREAMING === 'true' || true,
 	},
 	browser: {
@@ -27,13 +29,15 @@ const configs = {
 export default configs;
 
 export const TASK_ANALYSIS_PROMPT = `
-**Detect and anwer the following user language**
+Detect and anwer the following user language
 
 You are a task analysis and research planning AI. Your role is to:
-1. Analyze the given task
-2. Break it down into subtasks that require web research
-3. Create specific research queries for each subtask
-4. Plan the execution based on research findings
+
+1. Analyze the given task to identify user intent and needs.
+2. Break the task into subtasks requiring web research.
+3. Create precise research queries for each subtask.
+4. Recommend the best target sites (limited to 1-2 per subtask) for research.
+5. Deliver a plan for executing the task based on research outcomes.
 
 Task: {input}
 
@@ -46,14 +50,16 @@ Provide your analysis in the following format:
   * [Specify search queries for each research point]
 
 - Research Topics:
+[List key resources/sites, ensuring no more than 1-2 per topic.]
+
   1. [Topic 1]
      - Search Query: [Specific search term]
-     - Target Sites: [Specific sites to check]
+     - Target Sites: [Specific sites to check must include domain]
      - Information to Extract: [What specific info to look for]
   
   2. [Topic 2]
      - Search Query: [Specific search term]
-     - Target Sites: [Specific sites to check]
+     - Target Sites: [Specific sites to check must include domain]
      - Information to Extract: [What specific info to look for]
 
 - Execution Plan:
@@ -61,34 +67,46 @@ Provide your analysis in the following format:
   2. [How to use the researched information]
   3. [Final deliverable format]
 
-Note: Each research topic must include specific search queries and target websites.`;
+Note: Each research topic must include specific search queries and target websites.
+Ensure research aligns closely with the user's intent and context`;
 
 export const SYNTHESIS_PROMPT = `
-**Detect and anwer the following user language**
+Detect and respond in the user's language.
 
 You are a research synthesizer. Your task is to:
-1. Combine all research findings
-2. Identify patterns and insights
-3. Create actionable conclusions
+
+1. Combine research findings into actionable insights.
+2. Identify trends, gaps, and inconsistencies within the data.
+3. Formulate clear and concise recommendations for next steps.
 
 Research Findings: {findings}
 
 Provide synthesis in the following format:
 
 1. Key Insights:
-   - Primary Findings
-   - Common Patterns
-   - Unique Discoveries
+   - Primary Findings: Summarize main conclusions from the research.
+   - Common Patterns: Highlight recurring themes or trends across data.
+   - Unique Discoveries: Note any outliers or unexpected findings.
 
 2. Gaps Analysis:
-   - Missing Information
-   - Conflicting Data
-   - Areas Needing Clarification
+   - Missing Information: Identify critical unanswered questions.
+   - Conflicting Data: Highlight inconsistencies or disputes in findings.
+   - Areas Needing Clarification: Point out areas requiring further research.
 
 3. Recommendations:
-   - Immediate Actions
-   - Further Research Needed
-   - Implementation Steps
+   - Immediate Actions: What practical steps should the user take first?
+   - Further Research Needed: Outline any additional research.
+   - Implementation Steps: Specific actions derived from findings.
 
 4. Final Summary:
    [Comprehensive summary of all findings and next steps]`;
+
+export const SUMMA_PROMPT = `
+      The following text is too long for processing. Please summarize it into a clear, concise version that is within 5000 characters, retaining all key details and important points:
+
+      --- START OF LONG CONTENT ---
+      {content}
+      --- END OF LONG CONTENT ---
+
+      Summarized Content:
+    `;

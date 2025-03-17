@@ -1,14 +1,23 @@
 // src/agent/tools/browserTools.ts
-import {Tool} from 'langchain/tools';
-import {Browser, Page} from "puppeteer";
-import createBrowser from "../../utils/puppeteer.ts";
-import logger from "../../utils/logger.ts";
-import configs from '../../../configs/configs';
-
+import { Tool } from 'langchain/tools';
+import { Browser, Page } from 'puppeteer';
+import createBrowser from '../../utils/puppeteer.ts';
+import logger from '../../utils/logger.ts';
+import configs, { SUMMA_PROMPT } from '../../../configs/configs';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { ChatOpenAI } from '@langchain/openai';
 class BrowserTools extends Tool {
 	name = 'browser';
-	description = 'Use this tool to browse websites, search for information, and extract content from web pages. Input should be a URL or search query.';
+	description =
+		'Use this tool to browse websites, search for information, and extract content from web pages. Input should be a URL or search query.';
 	browser: Browser | null = null;
+
+	model = new ChatOpenAI({
+		temperature: configs.openai.temperature,
+		modelName: configs.openai.model,
+		streaming: configs.openai.streaming,
+		cache: true,
+	});
 
 	async handleInternalLinks(page: Page) {
 		try {
@@ -17,31 +26,29 @@ class BrowserTools extends Tool {
 				const currentHost = window.location.host;
 
 				// Improved search page detection
-				const isSearchPage = (
+				const isSearchPage =
 					// Major search engines
-					currentHost.includes('google.com') ||
-					currentHost.includes('bing.com') ||
-					currentHost.includes('duckduckgo.com') ||
-					currentHost.includes('yahoo.com') ||
-					currentHost.includes('yandex.com') ||
-					currentHost.includes('brave.com') ||
-					currentHost.includes('baidu.com')
-				) && (
+					(currentHost.includes('google.com') ||
+						currentHost.includes('bing.com') ||
+						currentHost.includes('duckduckgo.com') ||
+						currentHost.includes('yahoo.com') ||
+						currentHost.includes('yandex.com') ||
+						currentHost.includes('brave.com') ||
+						currentHost.includes('baidu.com')) &&
 					// Common search URL patterns
-					window.location.pathname.includes('/search') ||
-					window.location.pathname.includes('/web') ||
-					window.location.search.includes('?q=') ||
-					window.location.search.includes('?query=') ||
-					window.location.search.includes('?p=')
-				);
+					(window.location.pathname.includes('/search') ||
+						window.location.pathname.includes('/web') ||
+						window.location.search.includes('?q=') ||
+						window.location.search.includes('?query=') ||
+						window.location.search.includes('?p='));
 
 				const links = Array.from(document.querySelectorAll('a[href]'));
 
 				return {
 					isSearchPage,
 					links: links
-						.map(link => link.getAttribute('href'))
-						.filter(href => {
+						.map((link) => link.getAttribute('href'))
+						.filter((href) => {
 							if (!href) return false;
 
 							try {
@@ -57,10 +64,10 @@ class BrowserTools extends Tool {
 									'javascript:',
 									'mailto:',
 									'tel:',
-									'#'
+									'#',
 								];
 
-								if (skipPatterns.some(pattern => href.includes(pattern))) {
+								if (skipPatterns.some((pattern) => href.includes(pattern))) {
 									return false;
 								}
 
@@ -77,8 +84,8 @@ class BrowserTools extends Tool {
 											'yahoo.com',
 											'yandex.com',
 											'brave.com',
-											'baidu.com'
-										].some(domain => url.host.includes(domain));
+											'baidu.com',
+										].some((domain) => url.host.includes(domain));
 
 										return !isSearchEngine && url.host !== currentHost;
 									}
@@ -91,14 +98,18 @@ class BrowserTools extends Tool {
 							} catch {
 								return false;
 							}
-						})
+						}),
 				};
 			});
 
 			if (!links.links.length) return '';
 
 			// Log the page type
-			logger.info(`Processing ${links.isSearchPage ? 'search results' : 'internal links'} page`);
+			logger.info(
+				`Processing ${
+					links.isSearchPage ? 'search results' : 'internal links'
+				} page`
+			);
 
 			// Collect content from links
 			let allContent = '';
@@ -106,15 +117,19 @@ class BrowserTools extends Tool {
 				try {
 					if (!link) continue;
 					const absoluteUrl = new URL(link, page.url()).href;
-					logger.info(`Following ${links.isSearchPage ? 'external' : 'internal'} link: ${absoluteUrl}`);
+					logger.info(
+						`Following ${
+							links.isSearchPage ? 'external' : 'internal'
+						} link: ${absoluteUrl}`
+					);
 
 					await page.goto(absoluteUrl, {
 						waitUntil: 'networkidle2',
-						timeout: 15000
+						timeout: 15000,
 					});
 
 					try {
-						await page.waitForNetworkIdle({timeout: 5000});
+						await page.waitForNetworkIdle({ timeout: 5000 });
 					} catch (e) {
 						logger.debug('Network not idle for link, continuing...');
 					}
@@ -159,12 +174,13 @@ class BrowserTools extends Tool {
 					'[id*="ad-"]',
 				];
 
-				selectorsToRemove.forEach(selector => {
+				selectorsToRemove.forEach((selector) => {
 					const elements = element.querySelectorAll(selector);
-					elements.forEach(el => el.remove());
+					elements.forEach((el) => el.remove());
 				});
 
-				const mainContent = element.querySelector('main') ||
+				const mainContent =
+					element.querySelector('main') ||
 					element.querySelector('article') ||
 					element.querySelector('.content') ||
 					element.querySelector('#content') ||
@@ -183,8 +199,8 @@ class BrowserTools extends Tool {
 	async _call(input: string): Promise<string> {
 		try {
 			if (!this.browser) {
-				const _browser = await createBrowser()
-				this.browser = _browser as unknown as Browser || null;
+				const _browser = await createBrowser();
+				this.browser = (_browser as unknown as Browser) || null;
 			}
 
 			const page = await this.browser?.newPage();
@@ -208,10 +224,12 @@ class BrowserTools extends Tool {
 					];
 
 					// Script filtering logic
-					if (resourceType === 'script' &&
+					if (
+						resourceType === 'script' &&
 						(url.includes('google-analytics') ||
 							url.includes('advertisement') ||
-							url.includes('clarity'))) {
+							url.includes('clarity'))
+					) {
 						request.abort();
 					}
 					// Other resource types filtering
@@ -230,10 +248,11 @@ class BrowserTools extends Tool {
 				}
 			});
 
-
 			logger.info(`Navigating to: ${input}`);
 
-			const url = input.startsWith('http') ? input : `https://www.google.com/search?q=${encodeURIComponent(input)}`;
+			const url = input.startsWith('http')
+				? input
+				: `https://www.google.com/search?q=${encodeURIComponent(input)}`;
 
 			await page.goto(url, {
 				waitUntil: 'networkidle2',
@@ -241,7 +260,7 @@ class BrowserTools extends Tool {
 			});
 
 			try {
-				await page.waitForNetworkIdle({timeout: 5000});
+				await page.waitForNetworkIdle({ timeout: 5000 });
 			} catch (e) {
 				logger.debug('The network is not idle');
 			}
@@ -260,10 +279,17 @@ class BrowserTools extends Tool {
 			}
 
 			// Trim content to prevent token limits
-			content = content.substring(0, 5000);
+			if (content.length > 5000) {
+				logger.info('Content too large, Summarizing...');
+				const summon = await this.model.call([
+					new SystemMessage('Detect and anwer the following user language'),
+					new SystemMessage(SUMMA_PROMPT),
+					new HumanMessage(input),
+				]);
+				if (summon) content = summon.content.toString();
+			}
 
 			return content;
-
 		} catch (error: any) {
 			logger.error('Error in BrowserTool:', error);
 			return `Error accessing the web: ${error.message}`;

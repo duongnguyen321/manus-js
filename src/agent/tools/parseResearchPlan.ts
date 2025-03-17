@@ -1,4 +1,4 @@
-import logger from "../../utils/logger.ts";
+import logger from '../../utils/logger.ts';
 
 interface ResearchTopic {
 	name: string;
@@ -30,7 +30,7 @@ export default function parseResearchPlan(analysis: string) {
 				currentTopic = {
 					name: topicMatch[1]?.trim() ?? '',
 					searchQuery: '',
-					targetSites: []
+					targetSites: [],
 				};
 				continue;
 			}
@@ -49,11 +49,9 @@ export default function parseResearchPlan(analysis: string) {
 			if (targetSitesMatch?.[1]) {
 				currentTopic.targetSites = targetSitesMatch[1]
 					.split(',')
-					.map(site => site
-						.trim()
-						.replace(/\s*$/, '')
-					)
-					.filter(Boolean);
+					.map((site) => site.trim().replace(/\s*$/, ''))
+					.filter(Boolean)
+					.slice(0, 2);
 			}
 		}
 
@@ -63,9 +61,9 @@ export default function parseResearchPlan(analysis: string) {
 		}
 
 		logger.debug('Parsed research topics:', topics);
-		return {topics};
+		return { topics };
 	} catch (error) {
 		logger.error('Error parsing research plan:', error);
-		return {topics: []};
+		return { topics: [] };
 	}
 }
