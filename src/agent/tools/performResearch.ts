@@ -19,7 +19,7 @@ async function fetchSite(browserTool: BrowserTools, name: string, site: string, 
 			logger.info(`Searching on Google for: ${siteUrl}`);
 		}
 
-		const siteResult = await browserTool._call(siteUrl);
+		const siteResult = await browserTool.call(siteUrl);
 
 		return {
 			topic: name,

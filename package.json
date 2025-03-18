@@ -22,7 +22,6 @@
     "openai": "^4.87.3",
     "ora": "^8.2.0",
     "puppeteer": "^24.4.0",
-    "puppeteer-core": "^24.4.0",
     "puppeteer-real-browser": "^1.4.2"
   }
 }

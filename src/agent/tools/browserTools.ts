@@ -1,24 +1,40 @@
 // src/agent/tools/browserTools.ts
-import {Tool} from 'langchain/tools';
+import {OpenAI} from "openai";
 import {Browser, Page} from 'puppeteer';
+import {SystemMessage} from '@langchain/core/messages';
+import {ChatOpenAI} from '@langchain/openai';
 import createBrowser from '../../utils/puppeteer.ts';
 import logger from '../../utils/logger.ts';
 import configs, {SUMMA_PROMPT} from '../../../configs/configs';
-import {HumanMessage, SystemMessage} from '@langchain/core/messages';
-import {ChatOpenAI} from '@langchain/openai';
 
-class BrowserTools extends Tool {
+class BrowserTools {
 	name = 'browser';
 	description =
 		'Use this tool to browse websites, search for information, and extract content from web pages. Input should be a URL or search query.';
 	browser: Browser | null = null;
 
-	model = new ChatOpenAI({
-		temperature: configs.openai.temperature,
-		modelName: configs.openai.model,
-		streaming: configs.openai.streaming,
-		cache: true,
-	});
+	model: OpenAI | ChatOpenAI | null = null
+	modelName: string = configs.openrouter.model || 'openai/gpt-4o';
+	type: 'langchain' | 'openrouter' | null = null
+
+	constructor(type: 'langchain' | 'openrouter') {
+		if (type === "openrouter") {
+			this.model = new OpenAI({
+				apiKey: configs.openrouter.apiKey,
+				baseURL: configs.openrouter.apiBaseUrl,
+				dangerouslyAllowBrowser: true,
+			});
+		}
+		if (type === "langchain") {
+			this.model = new ChatOpenAI({
+				temperature: configs.openai.temperature,
+				modelName: configs.openai.model,
+				streaming: configs.openai.streaming,
+				cache: true,
+			});
+			this.type = type;
+		}
+	}
 
 	async handleInternalLinks(page: Page, browser: Browser) {
 		try {
@@ -200,11 +216,25 @@ class BrowserTools extends Tool {
 			return getTextContent(document.body);
 		});
 		logger.info('Summarizing content');
-		const summon = await this.model.call([
-			new SystemMessage('Detect and answer the following user language'),
-			new SystemMessage(SUMMA_PROMPT(content)),
-		]);
-		if (summon) return summon.content.toString();
+		if (this.type === 'openrouter' && this.model) {
+			const model = this.model as OpenAI;
+			const _summon = await model.chat.completions.create({
+				model: this.modelName,
+				messages: [
+					{role: 'system', content: 'Detect and answer the following user language'},
+					{role: 'system', content: SUMMA_PROMPT(content)},
+				],
+				temperature: configs.openrouter.temperature,
+			});
+			if (_summon.choices[0]?.message?.content) return _summon.choices[0]?.message.content
+		} else if (this.type === 'langchain' && this.model) {
+			const model = this.model as ChatOpenAI;
+			const _summon = await model.call([
+				new SystemMessage('Detect and answer the following user language'),
+				new SystemMessage(SUMMA_PROMPT(content)),
+			]);
+			if (_summon.content?.toString()) return _summon.content?.toString()
+		}
 		return content
 	}
 
@@ -218,7 +248,7 @@ class BrowserTools extends Tool {
 		await page.goto(input)
 	}
 
-	async _call(input: string): Promise<string> {
+	async call(input: string): Promise<string> {
 		try {
 			if (!this.browser) {
 				const _browser = await createBrowser();
@@ -303,15 +333,26 @@ class BrowserTools extends Tool {
 
 			// Trim content to prevent token limits
 			if (content.length > 10000) {
-				logger.info('Content too large, Summarizing...');
-				const summon = await this.model.call([
-					new SystemMessage('Detect and answer the following user language'),
-					new SystemMessage(SUMMA_PROMPT(content)),
-				]);
-				if (summon) content = summon.content.toString();
+				if (this.type === 'openrouter' && this.model) {
+					const model = this.model as OpenAI;
+					const _summon = await model.chat.completions.create({
+						model: this.modelName,
+						messages: [
+							{role: 'system', content: 'Detect and answer the following user language'},
+							{role: 'system', content: SUMMA_PROMPT(content)},
+						],
+						temperature: configs.openrouter.temperature,
+					});
+					if (_summon.choices[0]?.message?.content) content = _summon.choices[0]?.message.content
+				} else if (this.type === 'langchain' && this.model) {
+					const model = this.model as ChatOpenAI;
+					const _summon = await model.call([
+						new SystemMessage('Detect and answer the following user language'),
+						new SystemMessage(SUMMA_PROMPT(content)),
+					]);
+					if (_summon.content?.toString()) content = _summon.content?.toString()
+				}
 			}
-
-			console.log('content: ', content)
 
 			return content;
 		} catch (error: any) {

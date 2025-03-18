@@ -6,10 +6,10 @@ import ora from 'ora';
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
-import initializeAgentOpenRouter from './src/agent/tools/initializeAgentOpenRouter.ts';
+import initializeAgentLangChain from './src/agent/tools/initializeAgentLangChain.ts';
 
 const history: string[] = [];
-let selectedProvider: string | null = null; // Lưu AI provider được chọn
+let selectedProvider: "openai" | "openrouter" | null = null; // Lưu AI provider được chọn
 
 async function saveToFile(content: string, directory: string, filename: string) {
 	try {
@@ -64,7 +64,7 @@ async function selectAIProvider(rl: readline.Interface): Promise<string> {
 	console.log(chalk.yellow('\nAvailable AI Providers:\n'));
 
 	const providers: { name: string; id: string }[] = [
-			{ name: 'OpenAI', id: 'openai' },
+			{ name: 'OpenAI(LangChain)', id: 'openai' },
 			{ name: 'OpenRouter', id: 'openrouter' },
 	];
 
@@ -107,7 +107,7 @@ async function main() {
 
 	try {
 		// Bước 1: Chọn AI Provider
-		selectedProvider = await selectAIProvider(rl);
+		selectedProvider = await selectAIProvider(rl) as "openai" | "openrouter"
 
 		console.log(chalk.yellow(`Initializing AI agent using ${selectedProvider}...`));
 		let executor = null;
@@ -115,11 +115,11 @@ async function main() {
 		switch (selectedProvider) {
 			case 'openai':
 				console.log(chalk.yellow('Initializing OpenAI agent...'));
-				executor = await initializeAgent();
+				executor = await initializeAgentLangChain();
 				break;
 			case 'openrouter':
 				console.log(chalk.yellow('Initializing OpenRouter agent...'));
-				executor = await initializeAgentOpenRouter();
+				executor = await initializeAgent();
 
 				break;
 			default:
