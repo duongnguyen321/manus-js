@@ -27,7 +27,6 @@ class BrowserTools {
 		}
 		if (type === "langchain") {
 			this.model = new ChatOpenAI({
-				temperature: configs.openai.temperature,
 				modelName: configs.openai.model,
 				streaming: configs.openai.streaming,
 				cache: true,
@@ -224,7 +223,6 @@ class BrowserTools {
 					{role: 'system', content: 'Detect and answer the following user language'},
 					{role: 'system', content: SUMMA_PROMPT(content)},
 				],
-				temperature: configs.openrouter.temperature,
 			});
 			if (_summon.choices[0]?.message?.content) return _summon.choices[0]?.message.content
 		} else if (this.type === 'langchain' && this.model) {
@@ -341,7 +339,6 @@ class BrowserTools {
 							{role: 'system', content: 'Detect and answer the following user language'},
 							{role: 'system', content: SUMMA_PROMPT(content)},
 						],
-						temperature: configs.openrouter.temperature,
 					});
 					if (_summon.choices[0]?.message?.content) content = _summon.choices[0]?.message.content
 				} else if (this.type === 'langchain' && this.model) {

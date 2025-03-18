@@ -48,7 +48,6 @@ export default async function initializeAgent() {
 						{ role: 'system', content: 'Detect and answer the following user language' },
 						{ role: 'system', content: TASK_ANALYSIS_PROMPT(input) },
 					],
-					temperature: configs.openrouter.temperature,
 					stream: true,
 				});
 
@@ -78,7 +77,6 @@ export default async function initializeAgent() {
 						{ role: 'system', content: 'Detect and answer the following user language' },
 						{ role: 'system', content: SYNTHESIS_PROMPT(JSON.stringify(researchResults)) },
 					],
-					temperature: configs.openrouter.temperature,
 					stream: true,
 				});
 
@@ -94,7 +92,6 @@ export default async function initializeAgent() {
 						{ role: 'system', content: synthesis },
 						{ role: 'user', content: input },
 					],
-					temperature: configs.openrouter.temperature,
 					stream: true,
 				});
 

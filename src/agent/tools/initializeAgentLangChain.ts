@@ -12,7 +12,6 @@ export default async function initializeAgent() {
 	const browserTool = new BrowserTools('langchain');
 
 	const model = new ChatOpenAI({
-		temperature: configs.openai.temperature,
 		modelName: configs.openai.model,
 		streaming: configs.openai.streaming,
 		cache: true,
