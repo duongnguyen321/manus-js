@@ -1,4 +1,4 @@
-import { OpenAI } from 'openai';
+import {OpenAI} from 'openai';
 import performResearch from './performResearch.ts';
 import logger from '../../utils/logger.ts';
 import configs, {
@@ -6,7 +6,7 @@ import configs, {
 	TASK_ANALYSIS_PROMPT,
 } from '../../../configs/configs.ts';
 import BrowserTools from './browserTools.ts';
-import type { ChatCompletionChunk } from 'openai/resources/index.mjs';
+import type {ChatCompletionChunk, ChatCompletion} from 'openai/resources/index.mjs';
 
 async function streamOpenAIResponse(
 	response: AsyncIterable<ChatCompletionChunk>
@@ -51,12 +51,18 @@ export default async function initializeAgent() {
 							role: 'system',
 							content: 'Detect and answer the following user language',
 						},
-						{ role: 'system', content: TASK_ANALYSIS_PROMPT(input) },
+						{role: 'system', content: TASK_ANALYSIS_PROMPT(input)},
 					],
-					stream: true,
+					stream: configs.openrouter.streaming,
 				});
 
-				const analysis: string = await streamOpenAIResponse(analysisResponse);
+				let analysis: string = '';
+				if (configs.openrouter.streaming) {
+					analysis = await streamOpenAIResponse(analysisResponse as AsyncIterable<ChatCompletionChunk>);
+				} else {
+					const _analysis = (analysisResponse as ChatCompletion).choices[0]?.message?.content;
+					if (_analysis) analysis = _analysis;
+				}
 				if (!analysis.trim())
 					throw new Error('Failed to generate task analysis.');
 
@@ -95,11 +101,16 @@ export default async function initializeAgent() {
 							content: SYNTHESIS_PROMPT(JSON.stringify(researchResults)),
 						},
 					],
-					stream: true,
+					stream: configs.openrouter.streaming,
 				});
 
-				const synthesis: string = await streamOpenAIResponse(synthesisResponse);
-
+				let synthesis: string = '';
+				if (configs.openrouter.streaming) {
+					synthesis = await streamOpenAIResponse(synthesisResponse as AsyncIterable<ChatCompletionChunk>);
+				} else {
+					const _synthesis = (synthesisResponse as ChatCompletion).choices[0]?.message?.content;
+					if (_synthesis) synthesis = _synthesis;
+				}
 				if (!synthesis.trim())
 					throw new Error('Failed to synthesize research findings.');
 
@@ -111,14 +122,20 @@ export default async function initializeAgent() {
 							role: 'system',
 							content: 'Detect and answer the following user language',
 						},
-						{ role: 'system', content: synthesis },
-						{ role: 'user', content: input },
+						{role: 'system', content: synthesis},
+						{role: 'user', content: input},
 					],
-					stream: true,
+					stream: configs.openrouter.streaming,
 				});
-
-				return await streamOpenAIResponse(finalResponse);
-			} catch (error) {
+				let final: string = '';
+				if (configs.openrouter.streaming) {
+					final = await streamOpenAIResponse(finalResponse as AsyncIterable<ChatCompletionChunk>);
+				} else {
+					const _final = (finalResponse as ChatCompletion).choices[0]?.message?.content;
+					if (_final) final = _final;
+				}
+				return final
+			} catch (error) {``
 				logger.error('Error during task execution:', error);
 				return 'An error occurred while processing your request. Please try again later.';
 			} finally {

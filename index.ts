@@ -75,8 +75,9 @@ function createOutputCapturer() {
 	};
 }
 
-const history: string[] = [];
 let selectedProvider: 'openai' | 'openrouter' | null = null; // Lưu AI provider được chọn
+const history: string[] = [];
+const historyContext: { role: 'bot' | 'user', content: string }[] = []
 
 async function saveToFile(
 	content: string,
@@ -84,7 +85,7 @@ async function saveToFile(
 	filename: string
 ) {
 	try {
-		await fs.mkdir(directory, { recursive: true });
+		await fs.mkdir(directory, {recursive: true});
 
 		const sanitizedFilename = slug(filename);
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -102,7 +103,7 @@ async function saveToFile(
 }
 
 async function saveLog(query: string, process: { [key: string]: any }) {
-	const { stdout, ...rest } = process;
+	const {stdout, ...rest} = process;
 	const content = `# Query Log
 Query: ${query}
 Timestamp: ${new Date().toISOString()}
@@ -148,8 +149,8 @@ async function selectAIProvider(rl: readline.Interface): Promise<string> {
 	console.log(chalk.yellow('\nAvailable AI Providers:\n'));
 
 	const providers: { name: string; id: string }[] = [
-		{ name: 'OpenAI(LangChain)', id: 'openai' },
-		{ name: 'OpenRouter', id: 'openrouter' },
+		{name: 'OpenAI(LangChain)', id: 'openai'},
+		{name: 'OpenRouter', id: 'openrouter'},
 	];
 
 	providers.forEach((provider, index) => {
@@ -162,7 +163,7 @@ async function selectAIProvider(rl: readline.Interface): Promise<string> {
 		selectedIndex === null ||
 		selectedIndex < 0 ||
 		selectedIndex >= providers.length
-	) {
+		) {
 		const choice = await promptUser(
 			rl,
 			'Select an AI provider (1, 2) [Default: 1]:\n> '
@@ -278,6 +279,8 @@ async function main() {
 				console.log(chalk.gray(`Data saved to: ${dataPath}`));
 
 				history.push(query);
+				historyContext.push({role: 'user', content: query});
+				historyContext.push({role: 'bot', content: result.toString()});
 			} catch (error) {
 				const capturedOutput = outputCapturer.stop();
 
