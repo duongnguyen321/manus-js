@@ -1,20 +1,26 @@
 import {sleep} from "bun";
+import {domainOnlyRegex, domainRegex} from "../../helpers.ts";
 import configs from "../../../configs/configs.ts";
 import logger from "../../utils/logger.ts";
 import BrowserTools from "./browserTools.ts";
 
-const domainRegex = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[a-zA-Z0-9-._~:/?#[$@!$&'()*+,;=]*)?$/;
-
-// Helper function for individual site requests with delay
 async function fetchSite(browserTool: BrowserTools, name: string, site: string, searchQuery: string) {
 	try {
 		let siteUrl;
+
 		if (domainRegex.test(site)) {
-			// If it's a valid domain without protocol, add https://
-			siteUrl = site.startsWith('http') ? site : `https://${site}`;
-			logger.info(`Accessing site directly: ${siteUrl}`);
+			if (domainOnlyRegex.test(site)) {
+				// If it's a domain without path, access directly
+				siteUrl = site.startsWith('http') ? site : `https://${site}`;
+				logger.info(`Accessing site directly: ${siteUrl}`);
+			} else {
+				// If site has a path, use site-specific Google search
+				const cleanSite = site.split('/')[0]; // Get domain part only
+				siteUrl = `https://www.google.com/search?q=site:${cleanSite} ${encodeURIComponent(searchQuery)}`;
+				logger.info(`Performing site-specific search: ${siteUrl}`);
+			}
 		} else {
-			// Fallback to Google search if not a valid domain
+			// Fallback to regular Google search
 			siteUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
 			logger.info(`Searching on Google for: ${siteUrl}`);
 		}
@@ -50,7 +56,6 @@ async function ensureBrowserInitialized(browserTool: BrowserTools): Promise<void
 		}
 	}
 }
-
 
 // Function to create a delay between batches
 export default async function performResearch(browserTool: BrowserTools, topics: any) {

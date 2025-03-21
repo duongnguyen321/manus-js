@@ -8,14 +8,16 @@ import configs, {
 import BrowserTools from './browserTools.ts';
 import type { ChatCompletionChunk } from 'openai/resources/index.mjs';
 
-async function streamOpenAIResponse(response: AsyncIterable<ChatCompletionChunk>): Promise<string> {
-	let fullResponse = "";
+async function streamOpenAIResponse(
+	response: AsyncIterable<ChatCompletionChunk>
+): Promise<string> {
+	let fullResponse = '';
 
 	for await (const chunk of response) {
 		const content = chunk.choices?.[0]?.delta?.content || '';
 		if (content) {
-			process.stdout.write(content);
 			fullResponse += content;
+			process.stdout.write(content);
 		}
 	}
 
@@ -40,26 +42,33 @@ export default async function initializeAgent() {
 	return {
 		run: async (input: string) => {
 			try {
-			// 1. Task Analysis
-			logger.info('Analyzing task and creating research plan...');
+				// 1. Task Analysis
+				logger.info('Analyzing task and creating research plan...');
 				const analysisResponse = await openai.chat.completions.create({
 					model: modelName,
 					messages: [
-						{ role: 'system', content: 'Detect and answer the following user language' },
+						{
+							role: 'system',
+							content: 'Detect and answer the following user language',
+						},
 						{ role: 'system', content: TASK_ANALYSIS_PROMPT(input) },
 					],
 					stream: true,
 				});
 
 				const analysis: string = await streamOpenAIResponse(analysisResponse);
-				if (!analysis.trim()) throw new Error('Failed to generate task analysis.');
+				if (!analysis.trim())
+					throw new Error('Failed to generate task analysis.');
 
 				logger.info('Analysis result:', analysis);
 
 				let researchPlan = [];
 				try {
 					const jsonMatch = analysis.match(/```json\n([\s\S]*?)\n```/);
-					researchPlan = jsonMatch && jsonMatch[1] ? JSON.parse(jsonMatch[1]) : JSON.parse(analysis);
+					researchPlan =
+						jsonMatch && jsonMatch[1]
+							? JSON.parse(jsonMatch[1])
+							: JSON.parse(analysis);
 				} catch (error: any) {
 					logger.debug('Error parsing researchPlan:', error.message);
 				}
@@ -67,28 +76,41 @@ export default async function initializeAgent() {
 
 				// 3. Perform research for each topic
 				logger.info('Starting research phase...');
-				const researchResults = await performResearch(browserTool, researchPlan);
+				const researchResults = await performResearch(
+					browserTool,
+					researchPlan
+				);
 
 				// 4. Synthesize research findings
 				logger.info('Synthesizing research findings...');
 				const synthesisResponse = await openai.chat.completions.create({
 					model: modelName,
 					messages: [
-						{ role: 'system', content: 'Detect and answer the following user language' },
-						{ role: 'system', content: SYNTHESIS_PROMPT(JSON.stringify(researchResults)) },
+						{
+							role: 'system',
+							content: 'Detect and answer the following user language',
+						},
+						{
+							role: 'system',
+							content: SYNTHESIS_PROMPT(JSON.stringify(researchResults)),
+						},
 					],
 					stream: true,
 				});
 
 				const synthesis: string = await streamOpenAIResponse(synthesisResponse);
 
-				if (!synthesis.trim()) throw new Error('Failed to synthesize research findings.');
+				if (!synthesis.trim())
+					throw new Error('Failed to synthesize research findings.');
 
 				// 5. Generate final response
 				const finalResponse = await openai.chat.completions.create({
 					model: modelName,
 					messages: [
-						{ role: 'system', content: 'Detect and answer the following user language' },
+						{
+							role: 'system',
+							content: 'Detect and answer the following user language',
+						},
 						{ role: 'system', content: synthesis },
 						{ role: 'user', content: input },
 					],

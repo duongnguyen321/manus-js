@@ -3,6 +3,11 @@
   "module": "index.ts",
   "private": true,
   "type": "module",
+  "author": {
+    "email": "duongcoilc2004@gmail.com",
+    "name": "duongnguyen321",
+    "url": "https://duonguyen.site"
+  },
   "scripts": {
     "test": "bun run src/test.ts",
     "dev": "bun run --watch index.ts",

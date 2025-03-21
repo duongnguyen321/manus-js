@@ -28,3 +28,7 @@ export default function slug(str: string, id?: string | number) {
 	}
 	return str;
 }
+
+
+export const domainRegex = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/[a-zA-Z0-9-._~:/?#[$@!$&'()*+,;=]*)?$/;
+export const domainOnlyRegex = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
